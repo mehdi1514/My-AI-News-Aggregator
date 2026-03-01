@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 from sqlalchemy import Column, String, DateTime, Text
 from sqlalchemy.orm import declarative_base
 
@@ -28,11 +27,25 @@ class OpenAIArticle(Base):
     description = Column(Text)
     published_at = Column(DateTime, nullable=False)
     category = Column(String, nullable=True)
+    markdown = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class AnthropicArticle(Base):
     __tablename__ = "anthropic_articles"
+    
+    guid = Column(String, primary_key=True)
+    title = Column(String, nullable=False)
+    url = Column(String, nullable=False)
+    description = Column(Text)
+    published_at = Column(DateTime, nullable=False)
+    category = Column(String, nullable=True)
+    markdown = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class WiredArticle(Base):
+    __tablename__ = "wired_articles"
     
     guid = Column(String, primary_key=True)
     title = Column(String, nullable=False)

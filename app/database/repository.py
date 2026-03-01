@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Dict, Any
+from uuid import uuid4
 from sqlalchemy.orm import Session
-from .models import YouTubeVideo, OpenAIArticle, AnthropicArticle, Digest
+from .models import YouTubeVideo, OpenAIArticle, AnthropicArticle, WiredArticle, Digest
 from .connection import get_session
 
 
@@ -27,13 +28,13 @@ class Repository:
         self.session.commit()
         return video
     
-    def create_openai_article(self, guid: str, title: str, url: str, published_at: datetime,
+    def create_openai_article(self, title: str, url: str, published_at: datetime,
                               description: str = "", category: Optional[str] = None) -> Optional[OpenAIArticle]:
-        existing = self.session.query(OpenAIArticle).filter_by(guid=guid).first()
+        existing = self.session.query(OpenAIArticle).filter_by(url=url).first()
         if existing:
             return None
         article = OpenAIArticle(
-            guid=guid,
+            guid=str(uuid4()),
             title=title,
             url=url,
             published_at=published_at,
@@ -44,18 +45,36 @@ class Repository:
         self.session.commit()
         return article
     
-    def create_anthropic_article(self, guid: str, title: str, url: str, published_at: datetime,
+    def create_anthropic_article(self, title: str, url: str, published_at: datetime,
                                 description: str = "", category: Optional[str] = None) -> Optional[AnthropicArticle]:
-        existing = self.session.query(AnthropicArticle).filter_by(guid=guid).first()
+        existing = self.session.query(AnthropicArticle).filter_by(url=url).first()
         if existing:
             return None
         article = AnthropicArticle(
-            guid=guid,
+            guid=str(uuid4()),
             title=title,
             url=url,
             published_at=published_at,
             description=description,
             category=category
+        )
+        self.session.add(article)
+        self.session.commit()
+        return article
+    
+    def create_wired_article(self, title: str, url: str, published_at: datetime,
+                            description: str = "", category: Optional[str] = None, markdown: Optional[str] = None) -> Optional[WiredArticle]:
+        existing = self.session.query(WiredArticle).filter_by(url=url).first()
+        if existing:
+            return None
+        article = WiredArticle(
+            guid=str(uuid4()),
+            title=title,
+            url=url,
+            published_at=published_at,
+            description=description,
+            category=category,
+            markdown=markdown
         )
         self.session.add(article)
         self.session.commit()
@@ -83,10 +102,10 @@ class Repository:
     def bulk_create_openai_articles(self, articles: List[dict]) -> int:
         new_articles = []
         for a in articles:
-            existing = self.session.query(OpenAIArticle).filter_by(guid=a["guid"]).first()
+            existing = self.session.query(OpenAIArticle).filter_by(url=a["url"]).first()
             if not existing:
                 new_articles.append(OpenAIArticle(
-                    guid=a["guid"],
+                    guid=str(uuid4()),
                     title=a["title"],
                     url=a["url"],
                     published_at=a["published_at"],
@@ -101,21 +120,41 @@ class Repository:
     def bulk_create_anthropic_articles(self, articles: List[dict]) -> int:
         new_articles = []
         for a in articles:
-            existing = self.session.query(AnthropicArticle).filter_by(guid=a["guid"]).first()
+            existing = self.session.query(AnthropicArticle).filter_by(url=a["url"]).first()
             if not existing:
                 new_articles.append(AnthropicArticle(
-                    guid=a["guid"],
+                    guid=str(uuid4()),
                     title=a["title"],
                     url=a["url"],
                     published_at=a["published_at"],
                     description=a.get("description", ""),
-                    category=a.get("category")
+                    category=a.get("category"),
+                    markdown=a.get("markdown")
                 ))
         if new_articles:
             self.session.add_all(new_articles)
             self.session.commit()
         return len(new_articles)
     
+    def bulk_create_wired_articles(self, articles: List[dict]) -> int:
+        new_articles = []
+        for a in articles:
+            existing = self.session.query(WiredArticle).filter_by(url=a["url"]).first()
+            if not existing:
+                new_articles.append(WiredArticle(
+                    guid=str(uuid4()),
+                    title=a["title"],
+                    url=a["url"],
+                    published_at=a["published_at"],
+                    description=a.get("description", ""),
+                    category=a.get("category"),
+                    markdown=a.get("markdown")
+                ))
+        if new_articles:
+            self.session.add_all(new_articles)
+            self.session.commit()
+        return len(new_articles)
+
     def get_anthropic_articles_without_markdown(self, limit: Optional[int] = None) -> List[AnthropicArticle]:
         query = self.session.query(AnthropicArticle).filter(AnthropicArticle.markdown.is_(None))
         if limit:
@@ -193,6 +232,19 @@ class Repository:
                     "title": article.title,
                     "url": article.url,
                     "content": article.markdown or article.description or "",
+                    "published_at": article.published_at
+                })
+        
+        wired_articles = self.session.query(WiredArticle).all()
+        for article in wired_articles:
+            key = f"wired:{article.guid}"
+            if key not in seen_ids:
+                articles.append({
+                    "type": "wired",
+                    "id": article.guid,
+                    "title": article.title,
+                    "url": article.url,
+                    "content": article.description or "",
                     "published_at": article.published_at
                 })
         

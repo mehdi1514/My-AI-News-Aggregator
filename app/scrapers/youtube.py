@@ -120,7 +120,7 @@ if __name__ == "__main__":
     scraper = YouTubeScraper()
     # transcript: Transcript = scraper.get_transcript("jqd6_bbjhS8")
     # print(transcript.text)
-    channel_videos: List[ChannelVideo] = scraper.scrape_channel("UCawZsQWqfGSbCI5yjkdVkTA", hours=24)
+    channel_videos: List[ChannelVideo] = scraper.scrape_channel("UCawZsQWqfGSbCI5yjkdVkTA", hours=50)
     print(channel_videos)
 
     
