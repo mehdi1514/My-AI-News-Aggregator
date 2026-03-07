@@ -175,3 +175,8 @@ Set these in GitHub repo settings:
 - `APP_PASSWORD`
 - `PROXY_USERNAME` (optional)
 - `PROXY_PASSWORD` (optional)
+
+### Example Output
+
+<img width="1183" height="652" alt="Screenshot 2026-03-01 at 4 17 57 AM" src="https://github.com/user-attachments/assets/b95e1efe-4df6-4f6f-ac35-846fad9fbc41" />
+
