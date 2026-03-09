@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 from dotenv import load_dotenv
 import sys
 from pathlib import Path
@@ -21,7 +22,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def generate_email_digest(hours: int = 24, top_n: int = 10) -> EmailDigestResponse:
+def generate_email_digest(hours: int = 24, top_n: int = 10) -> Optional[EmailDigestResponse]:
     curator = CuratorAgent(USER_PROFILE)
     email_agent = EmailAgent(USER_PROFILE)
     repo = Repository()
@@ -31,7 +32,7 @@ def generate_email_digest(hours: int = 24, top_n: int = 10) -> EmailDigestRespon
     
     if total == 0:
         logger.warning(f"No digests found from the last {hours} hours")
-        raise ValueError("No digests available")
+        return None
     
     logger.info(f"Ranking {total} digests for email generation")
     ranked_articles = curator.rank_digests(digests)
@@ -73,6 +74,14 @@ def generate_email_digest(hours: int = 24, top_n: int = 10) -> EmailDigestRespon
 def send_digest_email(hours: int = 24, top_n: int = 10) -> dict:
     try:
         result = generate_email_digest(hours=hours, top_n=top_n)
+        if result is None:
+            return {
+                "success": True,
+                "skipped": True,
+                "reason": "No digests available",
+                "articles_count": 0
+            }
+
         markdown_content = result.to_markdown()
         html_content = digest_to_html(result)
         
@@ -87,6 +96,7 @@ def send_digest_email(hours: int = 24, top_n: int = 10) -> dict:
         logger.info("Email sent successfully!")
         return {
             "success": True,
+            "skipped": False,
             "subject": subject,
             "articles_count": len(result.articles)
         }
@@ -101,9 +111,12 @@ def send_digest_email(hours: int = 24, top_n: int = 10) -> dict:
 if __name__ == "__main__":
     result = send_digest_email(hours=24, top_n=10)
     if result["success"]:
-        print("\n=== Email Digest Sent ===")
-        print(f"Subject: {result['subject']}")
-        print(f"Articles: {result['articles_count']}")
+        if result.get("skipped"):
+            print("\n=== Email Digest Skipped ===")
+            print(result.get("reason", "No digests available"))
+        else:
+            print("\n=== Email Digest Sent ===")
+            print(f"Subject: {result['subject']}")
+            print(f"Articles: {result['articles_count']}")
     else:
         print(f"Error: {result['error']}")
-

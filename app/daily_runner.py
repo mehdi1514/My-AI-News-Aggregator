@@ -43,11 +43,13 @@ def run_daily_pipeline(hours: int = 24, top_n: int = 10) -> dict:
         results["scraping"] = {
             "youtube": len(scraping_results.get("youtube", [])),
             "openai": len(scraping_results.get("openai", [])),
-            "anthropic": len(scraping_results.get("anthropic", []))
+            "anthropic": len(scraping_results.get("anthropic", [])),
+            "wired": len(scraping_results.get("wired", []))
         }
         logger.info(f"✓ Scraped {results['scraping']['youtube']} YouTube videos, "
                     f"{results['scraping']['openai']} OpenAI articles, "
-                    f"{results['scraping']['anthropic']} Anthropic articles")
+                    f"{results['scraping']['anthropic']} Anthropic articles, "
+                    f"{results['scraping']['wired']} Wired articles")
         
         logger.info("\n[2/5] Processing Anthropic markdown...")
         anthropic_result = process_anthropic_markdown()
@@ -72,7 +74,10 @@ def run_daily_pipeline(hours: int = 24, top_n: int = 10) -> dict:
         results["email"] = email_result
         
         if email_result["success"]:
-            logger.info(f"✓ Email sent successfully with {email_result['articles_count']} articles")
+            if email_result.get("skipped"):
+                logger.info("✓ No digests available, email skipped")
+            else:
+                logger.info(f"✓ Email sent successfully with {email_result['articles_count']} articles")
             results["success"] = True
         else:
             logger.error(f"✗ Failed to send email: {email_result.get('error', 'Unknown error')}")
@@ -93,7 +98,10 @@ def run_daily_pipeline(hours: int = 24, top_n: int = 10) -> dict:
     logger.info(f"Scraped: {results['scraping']}")
     logger.info(f"Processed: {results['processing']}")
     logger.info(f"Digests: {results['digests']}")
-    logger.info(f"Email: {'Sent' if results['success'] else 'Failed'}")
+    if results["email"].get("skipped"):
+        logger.info("Email: Skipped (no digests available)")
+    else:
+        logger.info(f"Email: {'Sent' if results['success'] else 'Failed'}")
     logger.info("=" * 60)
     
     return results
@@ -102,4 +110,3 @@ def run_daily_pipeline(hours: int = 24, top_n: int = 10) -> dict:
 if __name__ == "__main__":
     result = run_daily_pipeline(hours=24, top_n=10)
     exit(0 if result["success"] else 1)
-
